@@ -41,7 +41,7 @@ Navegadores modernos: Chrome, Edge, Firefox, Safari.
   meridianos y paralelos** configurable, **etiquetas de país con bandera** siempre visibles,
   marca y nombre de cada capital, recorrido automático, alternativa 2D, y ficha completa de cada
   país (bandera, capital, ISO, ubicación, nota, mnemotecnia, pronunciación).
-- **Aprender** — recorridos guiados por región y de norte a sur, con preguntas rápidas.
+- **Aprender** — recorridos guiados por región y de norte a sur, con preguntas rápidas cada 5 países.
 - **Tarjetas** — 6 modos (país↔capital, bandera, silueta, ubicación, mezcla) con repetición
   espaciada y calificación *Fácil / Dudé / No la sabía*.
 - **Práctica** — 16 modos (A–P): opción múltiple, escritura, ubicar en el mapa/globo, banderas,
@@ -73,6 +73,21 @@ Todo se configura desde *Explorar → Capas y relieve del globo* o desde *Config
 
 Las etiquetas usan **anticolisión**: si dos se pisan en pantalla, se muestra la de mayor prioridad
 (seleccionada > país grande > país chico > capital) y el resto aparece al acercar el zoom.
+
+### Recorridos guiados
+
+Tanto el *Recorrido automático* de Explorar como los recorridos de Aprender funcionan igual:
+
+- La cámara **vuela hasta el país** (1,1 s) y se queda **4 segundos quieta** para que se lea.
+- El **zoom se adapta al tamaño real** del país: Brasil y Canadá se ven enteros, Barbados y
+  Granada se ven de cerca. El encuadre apunta al punto medio entre el país y su capital, así
+  se ven los dos juntos.
+- **Modo foco**: durante el recorrido se ocultan todas las etiquetas menos la del país en curso
+  y la de su capital, y el resto de los países se atenúa. Sin esto no se leía nada.
+- Un **cartel sobre el globo** muestra bandera, país, capital y el avance (`7 / 12`), así se
+  entiende aunque el sonido esté apagado.
+- Si el sonido está activado, además se pronuncia el país y su capital.
+- En *Aprender*, cada 5 países aparece una **pregunta rápida** sobre el país anterior.
 
 La luz principal sigue a la cámara, así el hemisferio visible siempre está iluminado y el relieve
 mantiene sus sombras.

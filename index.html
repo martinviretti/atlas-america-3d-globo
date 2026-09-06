@@ -173,6 +173,24 @@ main{min-height:calc(100vh - var(--nav-h))}
 .stage-legend{position:absolute;left:12px;bottom:12px;z-index:5;background:rgba(6,10,20,.7);
   border:1px solid var(--border);border-radius:var(--r-md);padding:9px 11px;backdrop-filter:blur(6px);font-size:.78rem;display:flex;flex-direction:column;gap:5px;max-width:190px}
 .stage-legend .lg{display:flex;align-items:center;gap:7px} .stage-legend .sw{width:12px;height:12px;border-radius:3px;flex-shrink:0}
+.stage-caption{position:absolute;left:50%;top:12px;transform:translateX(-50%);z-index:7;
+  display:flex;align-items:center;gap:12px;max-width:min(92%,560px);
+  background:rgba(6,12,24,.88);border:1px solid rgba(255,255,255,.22);border-radius:var(--r-lg);
+  padding:9px 16px 9px 12px;box-shadow:var(--sh-3);backdrop-filter:blur(8px);pointer-events:none}
+.stage-caption[hidden]{display:none}
+.stage-caption img{width:38px;height:26px;object-fit:cover;border-radius:4px;flex:0 0 auto;
+  box-shadow:0 0 0 1px rgba(255,255,255,.35)}
+.stage-caption .txt{display:flex;flex-direction:column;gap:1px;min-width:0}
+.stage-caption b{font-size:1.05rem;line-height:1.15}
+.stage-caption .txt span{color:#ffd166;font-size:.84rem;font-weight:600}
+.stage-caption .num{margin-left:auto;color:var(--text-mute);font-size:.78rem;font-weight:700;
+  font-variant-numeric:tabular-nums;flex:0 0 auto}
+@media(max-width:620px){
+  .stage-caption{top:8px;padding:7px 12px 7px 9px;gap:9px}
+  .stage-caption img{width:30px;height:21px}
+  .stage-caption b{font-size:.92rem}
+  .stage-caption .txt span{font-size:.76rem}
+}
 .stage-hint{position:absolute;bottom:10px;right:12px;z-index:5;color:var(--text-mute);font-size:.72rem;
   background:rgba(6,10,20,.66);padding:5px 9px;border-radius:6px;border:1px solid var(--border-2);pointer-events:none;max-width:60%}
 /* globe.gl inyecta su propio cartel de ayuda en inglés: lo reemplazamos por el nuestro */
@@ -1194,7 +1212,7 @@ const Globe=(function(){
   let world=null, host=null, geo=null, worldGeo=null, selectedId=null, ro=null;
   let opts={rotate:true,onSelect:null,capitals:true,labels:true,view:'relieve',mastery:false,
     world:true,grid:true,gridStep:15,gridNamed:true,relief:60,flags:true};
-  let tourTimer=null, hoverId=null, chips=[], camAlt=2.4, dirLight=null, updLight=null, declutterRAF=0, declutterT=0, declutterTimer=0, camLng=-75, especularTex=null;
+  let tourTimer=null, hoverId=null, chips=[], camAlt=2.4, focusId=null, dirLight=null, updLight=null, declutterRAF=0, declutterT=0, declutterTimer=0, camLng=-75, especularTex=null;
 
   function ensureStars(){
     if($('#stars-style'))return;
@@ -1223,6 +1241,7 @@ const Globe=(function(){
       return hexA(map[lv],selectedId===id?.95:Math.max(.55,style().fill));}
     if(selectedId===id) return 'rgba(56,189,248,.95)';
     if(hoverId===id) return hexA(regionHex(id),Math.min(1,style().fill+.35));
+    if(focusId&&focusId!==id) return hexA(regionHex(id),style().fill*.45);
     return hexA(regionHex(id),style().fill);
   }
   function strokeColor(f){return isCtx(f)?style().ctxStroke:style().strokeC;}
@@ -1302,7 +1321,9 @@ const Globe=(function(){
     return n;
   }
   function chipVisible(d){
-    if(d.type==='grid')return !!(opts.grid&&opts.gridNamed);
+    if(d.type==='grid')return !!(opts.grid&&opts.gridNamed)&&!focusId;
+    // modo foco (recorridos): solo el país en curso y su capital, sin ruido alrededor
+    if(focusId)return d.id===focusId;
     const on=(d.id===selectedId||d.id===hoverId);
     if(d.type==='capital'){
       if(!opts.capitals)return false;
@@ -1310,6 +1331,12 @@ const Globe=(function(){
     }
     if(!opts.labels)return on;
     return on||camAlt<=(PRIO_ALT[d.prio]||2.2);
+  }
+  function setFocus(id){
+    if(focusId===id)return;
+    focusId=id||null;
+    if(world)world.polygonCapColor(capColor);
+    refreshChips();
   }
   function refreshChips(){
     chips.forEach(d=>{const n=d.__el; if(!n)return;
@@ -1571,10 +1598,36 @@ const Globe=(function(){
       }else{world.arcsData([]).ringsData([]);}
     }
   }
-  function flyTo(c,alt){
+  /* Altitud de cámara según el tamaño real del país: Brasil se ve entero y
+     Barbados se ve de cerca. Sin esto, las islas quedaban como un punto. */
+  const BBOX={};
+  function bboxOf(id){
+    if(BBOX[id])return BBOX[id];
+    const f=geo&&geo.features.find(x=>x.properties.id===id);
+    if(!f||!f.geometry)return null;
+    let minLat=90,maxLat=-90,minLng=180,maxLng=-180;
+    const add=r=>{for(const pt of r){const lng=pt[0],lat=pt[1];
+      if(lat<minLat)minLat=lat; if(lat>maxLat)maxLat=lat;
+      if(lng<minLng)minLng=lng; if(lng>maxLng)maxLng=lng;}};
+    const g=f.geometry;
+    if(g.type==='Polygon')g.coordinates.forEach(add);
+    else if(g.type==='MultiPolygon')g.coordinates.forEach(pol=>pol.forEach(add));
+    else return null;
+    return BBOX[id]={minLat,maxLat,minLng,maxLng};
+  }
+  function altitudeFor(c){
+    const b=bboxOf(c.id); if(!b)return 1.3;
+    const midLat=(b.minLat+b.maxLat)/2;
+    const span=Math.max(b.maxLat-b.minLat,(b.maxLng-b.minLng)*Math.cos(midLat*Math.PI/180));
+    return clamp(.045*span+.42,.55,1.9);
+  }
+  /* Encuadra país y capital juntos: el objetivo es el punto medio entre ambos. */
+  function flyTo(c,alt,ms){
     if(!world)return;
-    const target=c.coordenadasCapital, a=alt||1.5;
-    world.pointOfView({lat:target.lat-4,lng:target.lng,altitude:a},A11y.reducedMotion()?0:1100);
+    const cap=c.coordenadasCapital, pais=c.coordenadasPais;
+    const a=alt||altitudeFor(c);
+    const lat=(cap.lat+pais.lat)/2, lng=(cap.lng+pais.lng)/2;
+    world.pointOfView({lat,lng,altitude:a},A11y.reducedMotion()?0:(ms==null?1100:ms));
     camAlt=a; refreshChips();
   }
   function overview(region){
@@ -1614,16 +1667,25 @@ const Globe=(function(){
     const m=$('#main'); if(m)m.appendChild(host);
     setVisible(false);
   }
-  function tour(list,{onStep,interval=3200,loop=false}={}){
+  /* vuelo (1,1 s) + pausa para leer. `hold` es la pausa una vez que la cámara llegó. */
+  function tour(list,{onStep,hold=4000,loop=false}={}){
     stopTour(); let i=0;
+    const vuelo=A11y.reducedMotion()?0:1100;
     const step=()=>{
       if(i>=list.length){ if(loop){i=0;} else {stopTour();onStep&&onStep(null,-1);return;} }
-      const c=list[i]; selectCountry(c,true); onStep&&onStep(c,i,list.length); i++;
+      const c=list[i], idx=i; i++;
+      setFocus(c.id); selectCountry(c,true);
+      onStep&&onStep(c,idx,list.length);
+      tourTimer=setTimeout(step,vuelo+hold);
     };
-    step(); tourTimer=setInterval(step,interval); applyPrefs();
+    step(); applyPrefs();
     return {stop:stopTour};
   }
-  function stopTour(){if(tourTimer){clearInterval(tourTimer);tourTimer=null;applyPrefs();}}
+  function stopTour(){
+    if(tourTimer){clearTimeout(tourTimer);tourTimer=null;}
+    if(focusId)setFocus(null);
+    applyPrefs();
+  }
   function compareArc(a,b){
     if(!world)return;
     world.arcsData([{startLat:a.coordenadasCapital.lat,startLng:a.coordenadasCapital.lng,endLat:b.coordenadasCapital.lat,endLng:b.coordenadasCapital.lng}]);
@@ -1637,7 +1699,7 @@ const Globe=(function(){
     for(let i=0;i<pts.length-1;i++){arcs.push({startLat:pts[i].coordenadasCapital.lat,startLng:pts[i].coordenadasCapital.lng,endLat:pts[i+1].coordenadasCapital.lat,endLng:pts[i+1].coordenadasCapital.lng});}
     world.arcsData(arcs);}
   function clearMarks(){selectedId=null;hoverId=null;if(world){world.arcsData([]).ringsData([]);refreshLayers();}}
-  return {available,init,mount,detach,setGeo,setWorldGeo,selectCountry,flyTo,overview,setView,setCapitals,
+  return {available,init,mount,detach,setGeo,setWorldGeo,selectCountry,flyTo,overview,setView,setCapitals,setFocus,altitudeFor,
     setLabels,setRotate,setMastery,setVisible,applyPrefs,refreshLayers,tour,stopTour,compareArc,getSelected,
     arcChain,clearMarks,resize,set onSelect(fn){opts.onSelect=fn;},get selectedId(){return selectedId;},
     get view(){return opts.view;}};
@@ -1781,6 +1843,22 @@ function buildStage({region='todas',onSelect,mastery=false}={}){
   stage.appendChild(legend);
   stage.appendChild(el('div',{class:'stage-hint','aria-hidden':'true',
     text:'Arrastrá para girar · rueda para acercar · tocá un país para su ficha'}));
+  // cartel de recorrido: se lee de lejos, sin depender del sonido ni de las etiquetas
+  const cap=el('div',{class:'stage-caption',hidden:true,'aria-hidden':'true'});
+  stage.appendChild(cap);
+  stage.__caption={
+    set(c,i,n){
+      cap.innerHTML='';
+      cap.append(
+        el('img',{src:c.bandera,alt:'',onerror:function(){this.style.display='none';}}),
+        el('div',{class:'txt'},
+          el('b',{text:c.nombreES}),
+          el('span',{text:(c.tipoCapital==='dual'?'Capitales: Sucre (constitucional) · La Paz (gobierno)':'Capital: '+c.capitalPrincipal)})),
+        (n?el('span',{class:'num',text:(i+1)+' / '+n}):null));
+      cap.hidden=false;
+    },
+    clear(){cap.hidden=true;cap.innerHTML='';}
+  };
   const mounted=mountStageInto(slot,{onSelect,region,mastery});
   stage.__slot=slot; stage.__mounted=mounted;
   if(mounted.type==='map'){legend.setAttribute('aria-hidden','false');}
@@ -1947,7 +2025,7 @@ function accuracyGlobal(){const s=Store.get().stats;return s.answered?(s.correct
 function viewExplorar(root,arg){
   if(Globe&&Globe.detach)Globe.detach();   // soltar el globo antes de vaciar
   root.innerHTML='';   // las vistas pueden re-renderizarse sobre sí mismas
-  let region='todas', is2D=!Globe.available, mapApi=null;
+  let region='todas', is2D=!Globe.available, mapApi=null, stageActual=null;
   root.appendChild(viewHead('Explorar','Explorá el globo','Girá arrastrando, acercá con la rueda, tocá un país para ver su ficha, escuchar su nombre y practicarlo.'));
 
   const layout=el('div',{class:'explore-grid'});
@@ -2008,26 +2086,39 @@ function viewExplorar(root,arg){
   root.appendChild(layout);
 
   let tour=null;
+  function pararTour(){
+    if(!tour)return;
+    Globe.stopTour(); tour=null; tourBtn.textContent='Recorrido automático';
+    if(stageActual&&stageActual.__caption)stageActual.__caption.clear();
+  }
   function toggleTour(){
     if(!Globe.available||is2D){UI.toast('El recorrido automático usa el globo 3D','info');return;}
-    if(tour){Globe.stopTour();tour=null;tourBtn.textContent='Recorrido automático';return;}
-    const list=inRegion(region);
+    if(tour){pararTour();return;}
+    const list=inRegion(region).slice().sort((a,b)=>b.coordenadasPais.lat-a.coordenadasPais.lat);
     if(!list.length){UI.toast('No hay países en esta región','warn');return;}
     tourBtn.textContent='Detener recorrido';
-    tour=Globe.tour(list,{interval:3000,loop:true,onStep:c=>{if(c){renderFicha(c,rightPanel);}}});
+    tour=Globe.tour(list,{hold:4000,loop:true,onStep:(c,i,n)=>{
+      if(!c)return;
+      renderFicha(c,rightPanel);
+      if(stageActual&&stageActual.__caption)stageActual.__caption.set(c,i,n);
+      Audio.speak(c.nombreES+'. Capital: '+c.capitalPrincipal);
+      UI.announce(c.nombreES+', capital '+c.capitalPrincipal);
+    }});
   }
   function refreshStage(){
-    if(tour){Globe.stopTour();tour=null;tourBtn.textContent='Recorrido automático';}
+    pararTour();
     if(Globe.available)Globe.detach();     // saca el host antes de vaciar: nunca se recrea el contexto WebGL
     stageHost.innerHTML='';
     if(is2D||!Globe.available){
       const wrap=el('div',{class:'panel',style:'padding:10px'});
       const holder=el('div');
+      stageActual=null;
       mapApi=Map2D.render(holder,{region,onSelect:c=>select(c),selectedId:Globe.selectedId,mastery:false});
       wrap.appendChild(holder); stageHost.appendChild(wrap);
     }else{
       mapApi=null;
       const stage=buildStage({region,onSelect:c=>select(c)});
+      stageActual=stage;
       stageHost.appendChild(stage);
       requestAnimationFrame(()=>{Globe.overview(region);Globe.resize();});
     }
@@ -2698,15 +2789,16 @@ function viewAprender(root){
     const list=orderedList(region);
     root.innerHTML='';
     root.appendChild(el('div',{class:'row between',style:'margin-bottom:12px'},
-      el('button',{class:'btn ghost sm',html:'&larr; Recorridos',onclick:()=>{clearTimeout(timer);Globe.stopTour();viewAprender(root);}}),
+      el('button',{class:'btn ghost sm',html:'&larr; Recorridos',onclick:()=>{clearTimeout(timer);Globe.stopTour();if(Globe.available)Globe.setFocus(null);viewAprender(root);}}),
       el('h2',{style:'margin:0;font-size:1.1rem',text:'Recorrido: '+(region==='todas'?'Toda América':REGIONS[region].nombre)})));
     const layout=el('div',{class:'explore-grid'});
     const left=el('div'); const info=el('aside',{class:'panel ficha'});
     layout.append(left,info); root.appendChild(layout);
 
-    let i=0,paused=false,timer=null,seen=[];
+    let i=0,paused=false,timer=null,seen=[],stage=null;
+    const PAUSA=4000, VUELO=1100;   // 4 s de lectura una vez que la cámara llegó
     if(Globe.available){
-      const stage=buildStage({region});left.appendChild(stage);
+      stage=buildStage({region});left.appendChild(stage);
     }else{
       const holder=el('div',{class:'panel',style:'padding:10px'});Map2D.render(holder,{region,onSelect:()=>{},selectedId:null});left.appendChild(holder);
     }
@@ -2720,7 +2812,11 @@ function viewAprender(root){
 
     function show(c){
       renderFicha(c,info);
-      if(Globe.available)Globe.selectCountry(c,true);
+      if(Globe.available){
+        Globe.setFocus(c.id);          // solo este país y su capital: sin etiquetas encima
+        Globe.selectCountry(c,true);   // vuela con el zoom justo para su tamaño
+      }
+      if(stage&&stage.__caption)stage.__caption.set(c,i,list.length);
       Audio.speak(c.nombreES+'. Capital: '+c.capitalPrincipal);
       progBar.querySelector('span').style.width=((i+1)/list.length*100)+'%';
       UI.announce(c.nombreES+', capital '+c.capitalPrincipal+'. País '+(i+1)+' de '+list.length);
@@ -2731,12 +2827,15 @@ function viewAprender(root){
       if(!vivo()){clearTimeout(timer);return;}
       if(j>=list.length){finishTour();return;}
       // pregunta rápida cada 4 países
-      if(j>0 && j%4===0 && !seen.includes(j)){seen.push(j);quickQuestion(list[j-1],()=>{i=j;show(list[i]);scheduleNext();});return;}
+      if(j>0 && j%5===0 && !seen.includes(j)){seen.push(j);quickQuestion(list[j-1],()=>{i=j;show(list[i]);scheduleNext();});return;}
       i=j;show(list[i]);scheduleNext();
     }
     function vivo(){return root.isConnected&&left.isConnected;}
     function scheduleNext(){clearTimeout(timer);
-      if(!paused&&i<list.length-1){timer=setTimeout(()=>{if(vivo())go(i+1);},3600);}}
+      if(!paused&&i<list.length-1){
+        const espera=(A11y.reducedMotion()?0:VUELO)+PAUSA;
+        timer=setTimeout(()=>{if(vivo())go(i+1);},espera);
+      }}
     function togglePause(){paused=!paused;pauseB.textContent=paused?'Reanudar':'Pausar';if(paused)clearTimeout(timer);else scheduleNext();}
     function quickQuestion(c,cont){
       clearTimeout(timer);
@@ -2753,7 +2852,10 @@ function viewAprender(root){
       const m=UI.modal(body,{title:'Pregunta rápida'});
     }
     function finishTour(){
+      clearTimeout(timer);
       Globe.stopTour&&Globe.stopTour();
+      if(Globe.available)Globe.setFocus(null);
+      if(stage&&stage.__caption)stage.__caption.clear();
       info.innerHTML='';
       info.appendChild(el('div',{class:'feedback ok'},el('h4',{text:'¡Recorrido completado!'}),
         el('div',{text:'Repasaste '+list.length+' países.'})));
