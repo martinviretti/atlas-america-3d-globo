@@ -33,6 +33,33 @@ Navegadores modernos: Chrome, Edge, Firefox, Safari.
 
 ---
 
+## Dos versiones
+
+| | `index.html` — **completa** | `estudiar.html` — **breve** |
+|---|---|---|
+| Para quién | Quien quiere el atlas entero | Quien solo quiere estudiar y que le tomen |
+| Estructura | 13 secciones con menú | **4 pasos** en una sola pantalla |
+| Práctica | 16 modalidades (A–P) | Una: 10 preguntas mezcladas |
+| Evaluación | Constructor configurable + examen final | — |
+| Extras | Tarjetas, comparador, confusiones, glosario, territorios, logros, certificado | — |
+| Globo | Los 5 estilos y todas las capas | Relieve con etiquetas y meridianos, sin configuración |
+| Progreso | `localStorage: atlas3d.v1` | `localStorage: atlas3d.estudiar.v1` |
+
+Los dos **comparten datos y motor**, así que las capitales, los distractores, el globo y la
+repetición espaciada son idénticos. **Los progresos son independientes**: pueden usarlas dos
+personas distintas en el mismo navegador sin pisarse.
+
+Los cuatro pasos de la versión breve:
+
+1. **Mapa** — buscás o tocás un país y ves su bandera, su capital en grande y un truco para acordarte.
+2. **Recorrido** — elegís una región y la cámara te lleva país por país (4 s en cada uno), con una
+   pregunta rápida cada 5.
+3. **Practicar** — 10 preguntas mezcladas (capital, país, bandera, silueta). Sin reloj: si errás,
+   te explica por qué. Prioriza lo que más te cuesta.
+4. **Progreso** — cuántos dominás de 35, precisión, racha, y botón para repasar solo los que fallás.
+
+---
+
 ## Qué incluye
 
 - **Inicio** — portada con globo 3D, resumen de progreso y accesos rápidos.
@@ -144,8 +171,14 @@ servidor. Podés **exportar / importar / reiniciar** tus datos desde *Configurac
 
 ```
 atlas-america-3d/
-├─ index.html                     # App completa (HTML + CSS + JS). Punto de entrada único.
+├─ index.html                     # App completa: router, 13 vistas, 16 modos, evaluación.
+├─ estudiar.html                  # Versión breve: 4 pasos en una sola pantalla.
 ├─ assets/
+│  ├─ atlas-data.js               # COMPARTIDO — los 35 países, regiones, confusiones,
+│  │                              #   territorios, glosario y fuentes. Fuente única de verdad.
+│  ├─ atlas-core.js               # COMPARTIDO — almacenamiento, repetición espaciada, logros,
+│  │                              #   audio, UI, accesibilidad, globo 3D, mapa 2D y preguntas.
+│  ├─ atlas.css                   # COMPARTIDO — sistema de diseño.
 │  ├─ lib/globe.gl.min.js         # Globe.GL 2.46 (incluye three.js). MIT.
 │  ├─ data/americas.geojson       # 35 países, Natural Earth 1:50m, filtrado y simplificado.
 │  ├─ data/world.geojson          # 138 países del resto del mundo (contexto del globo).
@@ -159,6 +192,13 @@ atlas-america-3d/
 │  ├─ build-geojson.mjs           # Generó americas.geojson desde Natural Earth (no es runtime).
 │  └─ build-world.mjs             # Generó world.geojson (contexto mundial). No es runtime.
 └─ README.md
+```
+
+Cada página define su almacén antes de cargar el motor:
+
+```html
+<script>window.ATLAS_KEY='atlas3d.estudiar.v1';</script>
+<script src="assets/atlas-core.js"></script>
 ```
 
 ---

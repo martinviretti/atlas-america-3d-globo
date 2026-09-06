@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="description" content="Atlas América — versión breve para estudiar los 35 países de América y sus capitales: mapa, recorrido guiado y práctica.">
+<meta name="color-scheme" content="dark">
+<title>Atlas América · Estudiar</title>
+<link rel="stylesheet" href="assets/atlas.css">
+<style>
+/* ============================================================
+   Versión breve — cuatro pasos, una sola pantalla
+   ============================================================ */
+body{overflow-x:hidden}
+.top{position:sticky;top:0;z-index:60;display:flex;align-items:center;gap:12px;
+  padding:0 16px;height:56px;background:rgba(9,14,26,.9);backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--border)}
+.top .marca{display:flex;align-items:center;gap:9px;text-decoration:none;color:var(--text);font-weight:800}
+.top .marca svg{width:30px;height:30px}
+.top .marca span{color:var(--accent)}
+.top .sp{flex:1}
+.top a.otra{font-size:.8rem;color:var(--text-mute);text-decoration:none;border:1px solid var(--border);
+  padding:6px 11px;border-radius:var(--r-pill)}
+.top a.otra:hover{color:var(--text);border-color:var(--accent)}
+
+.pasos{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;max-width:1180px;margin:16px auto 0;padding:0 16px}
+.pasos button{display:flex;flex-direction:column;align-items:center;gap:3px;padding:12px 6px;
+  border:1px solid var(--border);border-radius:var(--r-md);background:var(--panel);color:var(--text-dim);
+  font-weight:700;font-size:.92rem;cursor:pointer;min-height:64px;transition:all var(--t-fast)}
+.pasos button .n{font-size:.68rem;color:var(--text-mute);letter-spacing:.08em;text-transform:uppercase}
+.pasos button:hover{border-color:rgba(255,255,255,.25);background:var(--bg-3)}
+.pasos button[aria-selected="true"]{background:linear-gradient(180deg,rgba(56,189,248,.22),transparent);
+  border-color:var(--accent);color:var(--text);box-shadow:var(--glow)}
+.pasos button[aria-selected="true"] .n{color:var(--accent)}
+@media(max-width:560px){
+  .pasos{gap:6px;padding:0 10px;margin-top:10px}
+  .pasos button{font-size:.78rem;padding:8px 3px;min-height:52px;line-height:1.15}
+  .pasos button .n{font-size:.6rem}
+  .top{gap:8px;padding:0 10px}
+  .top .marca{font-size:.92rem}
+  .top a.otra{font-size:.72rem;padding:5px 9px;white-space:nowrap}
+  .hoja{padding:12px}
+}
+@media(max-width:400px){
+  .top .marca span{display:none}
+  .top a.otra .larga{display:none}
+}
+
+.hoja{max-width:1180px;margin:0 auto;padding:16px}
+.hoja h1{font-size:clamp(1.4rem,3.2vw,2rem);margin-bottom:.2em}
+.hoja>.intro{color:var(--text-dim);margin-bottom:14px;max-width:70ch}
+
+.dos{display:grid;grid-template-columns:1fr 360px;gap:14px;align-items:start}
+.dos #stage{min-height:min(66vh,640px)}
+@media(max-width:980px){.dos{grid-template-columns:1fr}.dos #stage{min-height:52vh}}
+
+/* Ficha grande y directa */
+.ficha-simple{padding:18px}
+.ficha-simple .bandera{width:100%;max-width:190px;border-radius:8px;border:1px solid var(--border);display:block}
+.ficha-simple h2{font-size:1.5rem;margin:12px 0 2px}
+.ficha-simple .cap{margin-top:14px;padding:14px;border-radius:var(--r-md);
+  background:linear-gradient(180deg,rgba(255,209,102,.14),transparent);border:1px solid rgba(255,209,102,.35)}
+.ficha-simple .cap .et{font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:#ffd166;font-weight:800}
+.ficha-simple .cap .v{font-size:1.7rem;font-weight:800;line-height:1.1;margin-top:2px}
+.ficha-simple .cap .doble{font-size:1.05rem;font-weight:700;line-height:1.35;margin-top:4px}
+.ficha-simple .truco{margin-top:14px;padding:12px;border-radius:var(--r-md);background:var(--r-caribe-d);
+  border:1px solid rgba(55,214,179,.3)}
+.ficha-simple .truco .et{font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--r-caribe);font-weight:800}
+.vacio-ficha{padding:34px 18px;text-align:center;color:var(--text-mute)}
+
+/* Recorrido */
+.regiones{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px}
+.regiones button{padding:16px;border-radius:var(--r-md);border:1px solid var(--border);background:var(--panel);
+  color:var(--text);text-align:left;cursor:pointer;transition:all var(--t-fast)}
+.regiones button:hover{border-color:var(--accent);transform:translateY(-2px)}
+.regiones button b{display:block;font-size:1.05rem;margin-top:6px}
+.regiones button small{color:var(--text-mute)}
+.mandos{display:flex;gap:8px;justify-content:center;margin-top:12px;flex-wrap:wrap}
+
+/* Práctica */
+.arranque{text-align:center;padding:26px 18px}
+.arranque .grande{font-size:1.1rem;padding:18px 34px;min-height:60px}
+.pregunta{max-width:720px;margin:0 auto}
+.pregunta .enunciado{font-size:1.25rem;font-weight:700;text-align:center;margin:10px 0 16px;line-height:1.35}
+.pregunta .media{display:flex;justify-content:center;margin-bottom:14px}
+.pregunta .media img{width:190px;max-width:66%;border-radius:8px;border:1px solid var(--border)}
+.pregunta .media .sil{width:200px;height:160px}
+.marcador{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:8px;
+  font-weight:700;font-size:.9rem;color:var(--text-dim)}
+.aciertos{color:var(--ok)}
+
+/* Progreso */
+.tarjetas-progreso{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:8px;margin-top:10px}
+.pais-chip{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:var(--r-sm);
+  border:1px solid var(--border-2);background:var(--bg-2);font-size:.86rem;cursor:pointer;text-align:left;color:var(--text)}
+.pais-chip:hover{border-color:var(--accent)}
+.pais-chip img{width:22px;height:15px;object-fit:cover;border-radius:2px;flex:0 0 auto}
+.pais-chip .nom{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pais-chip .est{width:11px;height:11px;border-radius:50%;flex:0 0 auto}
+.resumen-num{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <a class="marca" href="#" onclick="return false" aria-label="Atlas América · Estudiar">
+    <svg viewBox="0 0 40 40" fill="none" aria-hidden="true">
+      <circle cx="20" cy="20" r="18" fill="#0b1730" stroke="#38bdf8" stroke-width="1.5"/>
+      <path d="M20 3a17 17 0 000 34M20 3a17 17 0 010 34" stroke="#38bdf8" stroke-width="1" opacity=".5"/>
+      <path d="M3 20h34M6 12h28M6 28h28" stroke="#38bdf8" stroke-width="1" opacity=".4"/>
+      <path d="M15 8c-3 4-4 7-2 11s1 6-1 9c4 1 7-1 9-4s5-3 8-1c-1-4-4-5-6-9s-3-6-2-9c-5-1-11 0-13 3z" fill="#37d6b3" opacity=".9"/>
+    </svg>
+    Atlas <span>América</span>
+  </a>
+  <span class="sp"></span>
+  <button class="iconbtn" id="btnSound" aria-pressed="false" title="Sonido" aria-label="Activar sonido">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path class="wave" d="M15.5 8.5a5 5 0 010 7M19 5a9 9 0 010 14" opacity=".6"/></svg>
+  </button>
+  <a class="otra" href="index.html" title="Ir a la app completa">Versión <span class="larga">completa </span>&rarr;</a>
+</header>
+
+<nav class="pasos" id="pasos" role="tablist" aria-label="Pasos"></nav>
+
+<main id="main">
+  <div class="hoja" id="hoja" tabindex="-1"></div>
+  <div id="globe-host" aria-hidden="true"></div>
+</main>
+
+<div id="toast-root" aria-live="polite" aria-atomic="false"></div>
+<div id="modal-root" role="dialog" aria-modal="true" aria-labelledby="modal-title"></div>
+<div id="live" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+<div id="live-assert" class="sr-only" aria-live="assertive" aria-atomic="true"></div>
+
+<script>window.ATLAS_KEY='atlas3d.estudiar.v1';</script>
+<script src="assets/lib/globe.gl.min.js"></script>
+<script src="assets/atlas-data.js"></script>
+<script src="assets/atlas-core.js"></script>
+<script>
+'use strict';
+/* ============================================================
+   ATLAS AMÉRICA · ESTUDIAR — versión breve
+   Cuatro pasos en una sola pantalla: Mapa · Recorrido · Practicar · Progreso.
+   Datos: assets/atlas-data.js · Motor: assets/atlas-core.js
+   El progreso se guarda aparte del de la app completa (ATLAS_KEY).
+   ============================================================ */
+
+const PASOS=[
+  {id:'mapa',       n:'Paso 1', t:'Mapa'},
+  {id:'recorrido',  n:'Paso 2', t:'Recorrido'},
+  {id:'practicar',  n:'Paso 3', t:'Practicar'},
+  {id:'progreso',   n:'Paso 4', t:'Progreso'},
+];
+let pasoActual='mapa';
+
+function pintarPasos(){
+  const nav=$('#pasos'); nav.innerHTML='';
+  PASOS.forEach(p=>{
+    const b=el('button',{type:'button',role:'tab','aria-selected':String(p.id===pasoActual),
+      onclick:()=>irA(p.id)},
+      el('span',{class:'n',text:p.n}), el('span',{text:p.t}));
+    nav.appendChild(b);
+  });
+}
+function irA(id){
+  pasoActual=id;
+  pintarPasos();
+  Globe.detach();
+  const h=$('#hoja'); h.innerHTML='';
+  ({mapa:verMapa, recorrido:verRecorrido, practicar:verPracticar, progreso:verProgreso}[id])(h);
+  h.focus({preventScroll:true});
+  window.scrollTo({top:0,behavior:A11y.reducedMotion()?'auto':'smooth'});
+  UI.announce('Paso: '+(PASOS.find(p=>p.id===id)||{}).t);
+}
+
+/* ---------- Ficha simple: bandera grande, capital enorme, truco ---------- */
+function fichaSimple(c,host){
+  host.innerHTML='';
+  if(!c){
+    host.appendChild(el('div',{class:'vacio-ficha'},
+      el('p',{text:'Tocá un país en el globo o buscalo arriba para ver su capital.'})));
+    return;
+  }
+  const reg=REGIONS[c.regionPedagogica];
+  const caja=el('div',{class:'ficha-simple'});
+  caja.append(
+    el('img',{class:'bandera',src:c.bandera,alt:'Bandera de '+c.nombreES,
+      onerror:function(){this.style.display='none';}}),
+    el('div',{class:'row',style:'gap:8px;margin-top:12px'},el('span',{class:'tag '+c.regionPedagogica,text:reg.nombre})),
+    el('h2',{text:c.nombreES}));
+
+  const cap=el('div',{class:'cap'});
+  cap.appendChild(el('div',{class:'et',text:c.tipoCapital==='dual'?'Capitales':'Capital'}));
+  if(c.tipoCapital==='dual'){
+    cap.appendChild(el('div',{class:'doble'},el('b',{text:'Sucre'}),document.createTextNode(' — capital constitucional')));
+    cap.appendChild(el('div',{class:'doble'},el('b',{text:'La Paz'}),document.createTextNode(' — sede de gobierno')));
+  }else{
+    cap.appendChild(el('div',{class:'v',text:c.capitalPrincipal}));
+  }
+  caja.appendChild(cap);
+
+  caja.appendChild(el('div',{class:'truco'},
+    el('div',{class:'et',text:'Para acordarte'}),
+    el('div',{style:'margin-top:4px',text:c.ayudaMemoria})));
+
+  caja.appendChild(el('div',{class:'row',style:'margin-top:14px;gap:8px'},
+    el('button',{class:'btn sm',style:'flex:1',html:'🔊 Escuchar',
+      onclick:()=>speakOr(c.nombreES+'. Capital: '+c.capitalPrincipal)}),
+    el('button',{class:'btn sm',style:'flex:1',text:'Practicar este',
+      onclick:()=>{irA('practicar');setTimeout(()=>arrancarPractica('todas',5,[c]),60);}})));
+  host.appendChild(caja);
+}
+
+/* ============================================================
+   Paso 1 — MAPA
+   ============================================================ */
+function verMapa(root){
+  let region='todas';
+  root.appendChild(el('h1',{text:'Mirá dónde queda cada país'}));
+  root.appendChild(el('p',{class:'intro',text:'Girá el globo, acercá con la rueda y tocá un país. Vas a ver su bandera, su capital y un truco para acordarte.'}));
+
+  const barra=el('div',{class:'panel',style:'position:relative;z-index:5'});
+  barra.appendChild(searchBox(c=>elegir(c)));
+  const chips=regionChips(region,r=>{region=r;refrescar();});
+  chips.style.marginTop='10px'; barra.appendChild(chips);
+  barra.appendChild(el('div',{class:'row',style:'margin-top:10px;gap:8px;flex-wrap:wrap'},
+    el('button',{class:'btn sm',text:'Ver toda América',onclick:()=>Globe.overview(region)}),
+    el('button',{class:'btn sm ghost',text:'País al azar',onclick:()=>elegir(sample(inRegion(region),1)[0])})));
+  root.appendChild(barra);
+
+  const dos=el('div',{class:'dos',style:'margin-top:14px'});
+  const izq=el('div'); const der=el('aside',{class:'panel'});
+  dos.append(izq,der); root.appendChild(dos);
+
+  function refrescar(){
+    Globe.detach(); izq.innerHTML='';
+    if(Globe.available){
+      izq.appendChild(buildStage({region,onSelect:elegir}));
+      requestAnimationFrame(()=>{Globe.overview(region);Globe.resize();});
+    }else{
+      const cont=el('div',{class:'panel',style:'padding:10px'});
+      Map2D.render(cont,{region,onSelect:elegir});
+      izq.appendChild(cont);
+    }
+  }
+  function elegir(c){
+    if(!c)return;
+    if(Globe.available)Globe.selectCountry(c,true);
+    fichaSimple(c,der);
+    UI.announce(c.nombreES+', capital '+c.capitalPrincipal);
+  }
+  refrescar();
+  fichaSimple(Globe.getSelected(),der);
+}
+
+/* ============================================================
+   Paso 2 — RECORRIDO GUIADO
+   ============================================================ */
+function verRecorrido(root){
+  root.appendChild(el('h1',{text:'Dejá que te lleve país por país'}));
+  root.appendChild(el('p',{class:'intro',text:'La cámara viaja a cada país, se queda 4 segundos y te muestra su capital. Cada 5 países te hace una pregunta rápida. Podés pausar cuando quieras.'}));
+
+  const grupos=[
+    {id:'norte',t:'América del Norte',n:3},{id:'central',t:'América Central',n:7},
+    {id:'caribe',t:'Caribe',n:13},{id:'sur',t:'América del Sur',n:12},
+    {id:'todas',t:'América completa',n:35},
+  ];
+  const grid=el('div',{class:'regiones'});
+  grupos.forEach(g=>grid.appendChild(el('button',{type:'button',onclick:()=>arrancar(g.id)},
+    g.id==='todas'?el('span',{class:'chip on',text:'Todo'}):el('span',{class:'tag '+g.id,text:REGIONS[g.id].nombre}),
+    el('b',{text:g.t}), el('small',{text:g.n+' países · '+Math.ceil(g.n*5.1/60)+' min aprox.'}))));
+  root.appendChild(grid);
+
+  function arrancar(id){
+    if(!Globe.available){UI.toast('El recorrido usa el globo 3D','warn','Tu navegador no tiene WebGL: usá el paso Mapa');return;}
+    const lista=inRegion(id).slice().sort((a,b)=>b.coordenadasPais.lat-a.coordenadasPais.lat);
+    root.innerHTML='';
+    root.appendChild(el('div',{class:'row between',style:'margin-bottom:12px'},
+      el('button',{class:'btn ghost sm',html:'&larr; Elegir otro',onclick:()=>{parar();verRecorrido(root);}}),
+      el('h2',{style:'margin:0;font-size:1.05rem',text:id==='todas'?'América completa':REGIONS[id].nombre})));
+
+    const stage=buildStage({region:id}); root.appendChild(stage);
+    const barra=el('div',{class:'bar',style:'margin-top:10px'},el('span',{style:'width:0%'}));
+    const mandos=el('div',{class:'mandos'});
+    const bAnt=el('button',{class:'btn sm',html:'&larr; Anterior',onclick:()=>saltar(-1)});
+    const bPausa=el('button',{class:'btn sm primary',text:'Pausar',onclick:()=>alternarPausa()});
+    const bSig=el('button',{class:'btn sm',html:'Siguiente &rarr;',onclick:()=>saltar(1)});
+    mandos.append(bAnt,bPausa,bSig);
+    const ficha=el('aside',{class:'panel',style:'margin-top:14px'});
+    root.append(barra,mandos,ficha);
+
+    let i=-1, pausado=false, reloj=null, preguntados=[];
+    const vivo=()=>root.isConnected&&stage.isConnected;
+
+    function mostrar(k){
+      if(!vivo())return;
+      i=k; const c=lista[i];
+      Globe.setFocus(c.id); Globe.selectCountry(c,true);
+      if(stage.__caption)stage.__caption.set(c,i,lista.length);
+      fichaSimple(c,ficha);
+      Audio.speak(c.nombreES+'. Capital: '+c.capitalPrincipal);
+      barra.querySelector('span').style.width=((i+1)/lista.length*100)+'%';
+      UI.announce(c.nombreES+', capital '+c.capitalPrincipal+'. País '+(i+1)+' de '+lista.length);
+      bAnt.disabled=i===0;
+      programar();
+    }
+    function programar(){
+      clearTimeout(reloj);
+      if(pausado||i>=lista.length-1)return;
+      const espera=(A11y.reducedMotion()?0:1100)+4000;   // vuelo + 4 s de lectura
+      reloj=setTimeout(()=>{if(vivo())avanzar();},espera);
+    }
+    function avanzar(){
+      const sig=i+1;
+      if(sig>=lista.length){terminar();return;}
+      // cada 5 países, una pregunta sobre el anterior
+      if(sig>0 && sig%5===0 && !preguntados.includes(sig)){
+        preguntados.push(sig); clearTimeout(reloj);
+        preguntaRapida(lista[sig-1],()=>mostrar(sig));
+        return;
+      }
+      mostrar(sig);
+    }
+    function saltar(d){
+      clearTimeout(reloj);
+      if(d>0){avanzar();return;}      // adelante siempre por avanzar(): ahí vive la pregunta cada 5
+      const k=i+d;
+      if(k<0)return;
+      mostrar(k);
+    }
+    function alternarPausa(){
+      pausado=!pausado; bPausa.textContent=pausado?'Seguir':'Pausar';
+      if(pausado)clearTimeout(reloj); else programar();
+    }
+    function parar(){clearTimeout(reloj);Globe.stopTour();if(Globe.available)Globe.setFocus(null);}
+    function terminar(){
+      parar();
+      if(stage.__caption)stage.__caption.clear();
+      ficha.innerHTML='';
+      ficha.appendChild(el('div',{class:'feedback ok'},
+        el('h4',{text:'¡Recorrido terminado!'}),
+        el('div',{text:'Viste '+lista.length+' países. Ahora probá el paso 3 para ver cuántos te quedaron.'})));
+      ficha.appendChild(el('div',{class:'row',style:'margin-top:12px;gap:8px'},
+        el('button',{class:'btn primary',text:'Practicar ahora',onclick:()=>irA('practicar')}),
+        el('button',{class:'btn ghost',text:'Otro recorrido',onclick:()=>{verRecorrido(root);}})));
+    }
+    mostrar(0);
+  }
+}
+
+/* Pregunta rápida en una ventanita, sin cortar el hilo del recorrido */
+function preguntaRapida(c,seguir){
+  let yaSiguio=false;
+  const continuar=()=>{if(yaSiguio)return;yaSiguio=true;seguir&&seguir();};
+  const q=Quiz.buildQuestion('mc-capital',{country:c,optionCount:3});
+  const cuerpo=el('div');
+  cuerpo.appendChild(el('div',{class:'quiz-q',style:'font-size:1.1rem',text:q.promptText}));
+  const ops=el('div',{class:'options'});
+  q.options.forEach(o=>ops.appendChild(el('button',{class:'opt',text:o,onclick:()=>{
+    const bien=(o===q.answer);
+    SR.record(c.id,bien,0);
+    $$('.opt',ops).forEach(b=>{b.disabled=true;
+      if(b.textContent===q.answer)b.classList.add('correct');
+      else if(b.textContent===o)b.classList.add('wrong');});
+    Audio.play(bien?'ok':'bad');
+    if(!bien)cuerpo.appendChild(el('div',{class:'note',style:'margin-top:10px',text:c.ayudaMemoria}));
+    setTimeout(()=>{m.close();continuar();},bien?900:2000);
+  }})));
+  cuerpo.appendChild(ops);
+  const m=UI.modal(cuerpo,{title:'Pregunta rápida',onClose:continuar});
+}
+
+/* ============================================================
+   Paso 3 — PRACTICAR
+   ============================================================ */
+const TIPOS=['mc-capital','mc-country','mc-flag','mc-silhouette'];
+
+function verPracticar(root){
+  let region=Store.cfg().region||'todas', cantidad=10;
+  root.appendChild(el('h1',{text:'Probá cuánto te acordás'}));
+  root.appendChild(el('p',{class:'intro',text:'Diez preguntas mezcladas: capital, país, bandera y silueta. Elige solas las que más te cuestan, así no perdés tiempo con las que ya sabés.'}));
+
+  const conf=el('div',{class:'panel'});
+  conf.appendChild(el('div',{class:'kick',text:'Región'}));
+  const chips=regionChips(region,r=>region=r); chips.style.margin='8px 0 4px';
+  conf.appendChild(chips);
+  conf.appendChild(el('div',{class:'kick',style:'margin-top:12px',text:'Cuántas preguntas'}));
+  conf.appendChild(segEl([['5','5'],['10','10'],['20','20']],'10',v=>cantidad=+v));
+  root.appendChild(conf);
+
+  const arranque=el('div',{class:'arranque'});
+  arranque.appendChild(el('button',{class:'btn primary grande',text:'Empezar',
+    onclick:()=>arrancarPractica(region,cantidad)}));
+  arranque.appendChild(el('div',{class:'muted',style:'margin-top:10px;font-size:.85rem',
+    text:'Sin reloj y sin penalización: si errás, te explica por qué.'}));
+  root.appendChild(arranque);
+
+  const rep=SR.dueList(COUNTRIES);
+  if(rep.length){
+    root.appendChild(el('div',{class:'card',style:'margin-top:8px'},
+      el('b',{text:'Tenés '+rep.length+' país'+(rep.length===1?'':'es')+' para repasar'}),
+      el('div',{class:'muted',style:'font-size:.86rem;margin:4px 0 10px',text:'Son los que venís fallando o los que toca repasar hoy.'}),
+      el('button',{class:'btn sm',text:'Repasar solo esos',onclick:()=>arrancarPractica('todas',rep.length,rep)})));
+  }
+}
+
+function segEl(opciones,valor,onChange){
+  const seg=el('div',{class:'seg',role:'group'});
+  opciones.forEach(([v,l])=>seg.appendChild(el('button',{type:'button','aria-pressed':String(v===valor),text:l,
+    onclick:e=>{$$('button',seg).forEach(b=>b.setAttribute('aria-pressed','false'));
+      e.currentTarget.setAttribute('aria-pressed','true');onChange(v);}})));
+  return seg;
+}
+
+function arrancarPractica(region,cantidad,lista){
+  const root=$('#hoja');
+  Globe.detach(); root.innerHTML='';
+  const items=(lista&&lista.length)?lista.slice(0,Math.max(1,cantidad||lista.length))
+                                   :Quiz.pool(region,clamp(cantidad||10,1,COUNTRIES.length),'adaptive');
+  if(!items.length){UI.toast('No hay países para practicar','warn');verPracticar(root);return;}
+  const preguntas=items.map((c,k)=>Quiz.buildQuestion(TIPOS[k%TIPOS.length],{country:c,optionCount:4,region}));
+
+  root.appendChild(el('div',{class:'row between',style:'margin-bottom:10px'},
+    el('button',{class:'btn ghost sm',html:'&larr; Salir',onclick:()=>{verPracticar(root);}}),
+    el('h2',{style:'margin:0;font-size:1.05rem',text:'Práctica'})));
+
+  const caja=el('div',{class:'panel pregunta'});
+  const marcador=el('div',{class:'marcador'});
+  const barra=el('div',{class:'bar'},el('span',{style:'width:0%'}));
+  const zona=el('div',{'aria-live':'polite',style:'margin-top:14px'});
+  const pie=el('div',{style:'margin-top:14px'});
+  caja.append(marcador,barra,zona,pie);
+  root.appendChild(caja);
+
+  let k=0, aciertos=0, respondida=false, teclas=null;
+  const fallos=[];
+  const t0=Date.now();
+
+  function limpiarTeclas(){if(teclas){document.removeEventListener('keydown',teclas);teclas=null;}}
+  function dibujar(){
+    limpiarTeclas(); respondida=false;
+    const q=preguntas[k], c=byId(q.countryId);
+    marcador.innerHTML='';
+    marcador.append(el('span',{text:'Pregunta '+(k+1)+' de '+preguntas.length}),
+      el('span',{class:'aciertos',text:aciertos+' ✓'}));
+    barra.querySelector('span').style.width=(k/preguntas.length*100)+'%';
+    zona.innerHTML=''; pie.innerHTML='';
+
+    if(q.media.flag)zona.appendChild(el('div',{class:'media'},
+      el('img',{src:q.media.flag,alt:'Bandera a identificar',onerror:function(){this.style.display='none';}})));
+    if(q.media.silhouette){const d=el('div',{class:'sil'});d.innerHTML=siluetaSVG(c,200,'var(--accent)');
+      zona.appendChild(el('div',{class:'media'},d));}
+    zona.appendChild(el('div',{class:'enunciado',text:q.promptText}));
+
+    const ops=el('div',{class:'options'});
+    q.options.forEach((o,idx)=>{
+      const b=el('button',{class:'opt',type:'button'},
+        el('span',{class:'key','aria-hidden':'true',text:String(idx+1)}), el('span',{text:o}));
+      b.addEventListener('click',()=>responder(o,ops));
+      ops.appendChild(b);
+    });
+    zona.appendChild(ops);
+    teclas=e=>{const n=parseInt(e.key);if(n>=1&&n<=q.options.length&&!respondida){const b=ops.children[n-1];if(b)b.click();}};
+    document.addEventListener('keydown',teclas);
+    UI.announce(q.promptText);
+  }
+  function responder(dada,ops){
+    if(respondida)return; respondida=true;
+    const q=preguntas[k], c=byId(q.countryId), bien=(dada===q.answer);
+    SR.record(c.id,bien,0);
+    const st=Store.get().stats; st.answered++; if(bien)st.correct++; Store.save();
+    if(bien){aciertos++;Game.addPoints(8);Audio.play('ok');} else {fallos.push(c);Audio.play('bad');}
+    $$('.opt',ops).forEach(b=>{b.disabled=true;
+      const t=b.querySelector('span:last-child').textContent;
+      if(t===q.answer)b.classList.add('correct'); else if(t===dada)b.classList.add('wrong');});
+    const fb=el('div',{class:'feedback '+(bien?'ok':'bad'),role:'status'},
+      el('h4',{text:bien?'¡Bien!':'No era esa'}),
+      bien?null:el('div',{},document.createTextNode('La respuesta es '),el('b',{text:q.answer})),
+      q.note?el('div',{class:'note',style:'margin-top:6px',text:q.note}):null,
+      el('div',{class:'note',style:'margin-top:6px',text:c.ayudaMemoria}));
+    zona.appendChild(fb);
+    marcador.querySelector('.aciertos').textContent=aciertos+' ✓';
+    barra.querySelector('span').style.width=((k+1)/preguntas.length*100)+'%';
+    const ultima=k>=preguntas.length-1;
+    const b=el('button',{class:'btn primary block',text:ultima?'Ver resultado':'Siguiente',
+      onclick:()=>{limpiarTeclas();if(ultima)terminar();else{k++;dibujar();}}});
+    pie.appendChild(b);
+    setTimeout(()=>b.focus(),50);
+  }
+  function terminar(){
+    limpiarTeclas();
+    Store.get().stats.studySeconds+=Math.round((Date.now()-t0)/1000);
+    Store.save(); Game.checkAchievements();
+    const pct=Math.round(aciertos/preguntas.length*100);
+    caja.innerHTML='';
+    caja.appendChild(el('div',{style:'text-align:center'},
+      el('div',{class:'kick',text:'Resultado'}),
+      el('div',{class:'donut',style:'--v:'+pct+';margin:12px auto'},el('span',{class:'val',text:pct+'%'})),
+      el('h2',{style:'margin:0',text:aciertos+' de '+preguntas.length+' bien'})));
+    if(fallos.length){
+      const lista=el('div',{style:'margin-top:16px'},el('h3',{text:'Repasá estos'}));
+      fallos.forEach(c=>lista.appendChild(el('div',{class:'kv'},
+        el('span',{class:'k'},el('b',{text:c.nombreES})),
+        el('span',{class:'v',text:c.tipoCapital==='dual'?'Sucre / La Paz':c.capitalPrincipal}))));
+      caja.appendChild(lista);
+    }else{
+      caja.appendChild(el('div',{class:'feedback ok',style:'margin-top:14px'},
+        el('h4',{text:'¡Todas bien!'}),el('div',{text:'Ni un error. Probá con una región más difícil.'})));
+      UI.celebrate();
+    }
+    const botones=el('div',{class:'row',style:'margin-top:16px;justify-content:center;flex-wrap:wrap'});
+    if(fallos.length)botones.appendChild(el('button',{class:'btn primary',text:'Repetir los que fallé',
+      onclick:()=>arrancarPractica(region,fallos.length,fallos.slice())}));
+    botones.append(
+      el('button',{class:'btn',text:'Otra ronda',onclick:()=>arrancarPractica(region,preguntas.length)}),
+      el('button',{class:'btn ghost',text:'Ver mi progreso',onclick:()=>irA('progreso')}));
+    caja.appendChild(botones);
+    caja.scrollIntoView({behavior:A11y.reducedMotion()?'auto':'smooth',block:'start'});
+  }
+  dibujar();
+}
+
+/* ============================================================
+   Paso 4 — MI PROGRESO
+   ============================================================ */
+function verProgreso(root){
+  const s=Store.get();
+  const dominados=COUNTRIES.filter(c=>SR.level(c.id)==='dominado').length;
+  const precision=s.stats.answered?Math.round(s.stats.correct/s.stats.answered*100):0;
+
+  root.appendChild(el('h1',{text:'Cómo vas'}));
+  root.appendChild(el('p',{class:'intro',text:'Un país queda "dominado" cuando lo acertás varias veces seguidas y con el tiempo. Los que fallás vuelven a aparecer más seguido.'}));
+
+  const nums=el('div',{class:'resumen-num'});
+  nums.append(
+    el('div',{class:'panel',style:'text-align:center'},
+      el('div',{class:'donut',style:'--v:'+Math.round(dominados/35*100)+';margin:0 auto'},el('span',{class:'val',text:dominados})),
+      el('div',{class:'muted',style:'margin-top:8px',text:'de 35 dominados'})),
+    el('div',{class:'panel'},el('div',{class:'metric'},el('span',{class:'n',text:precision+'%'}),el('span',{class:'l',text:'Precisión'})),
+      el('div',{class:'divider'}),el('div',{class:'metric'},el('span',{class:'n',text:String(s.stats.bestStreak)}),el('span',{class:'l',text:'Mejor racha'}))),
+    el('div',{class:'panel'},el('div',{class:'metric'},el('span',{class:'n',text:String(s.stats.answered)}),el('span',{class:'l',text:'Respuestas'})),
+      el('div',{class:'divider'}),el('div',{class:'metric'},el('span',{class:'n',text:fmtTime(s.stats.studySeconds)}),el('span',{class:'l',text:'Tiempo'})))
+  );
+  root.appendChild(nums);
+
+  const rep=SR.dueList(COUNTRIES);
+  root.appendChild(el('div',{class:'row',style:'margin-top:14px;gap:8px;flex-wrap:wrap'},
+    rep.length?el('button',{class:'btn primary',text:'Repasar los '+rep.length+' que me cuestan',
+      onclick:()=>arrancarPractica('todas',rep.length,rep)}):null,
+    el('button',{class:'btn',text:'Practicar 10',onclick:()=>arrancarPractica('todas',10)})));
+
+  REGION_ORDER.forEach(r=>{
+    const lista=inRegion(r);
+    const dom=lista.filter(c=>SR.level(c.id)==='dominado').length;
+    root.appendChild(el('div',{class:'row between',style:'margin:18px 0 4px'},
+      el('h3',{style:'margin:0'},el('span',{class:'tag '+r,text:REGIONS[r].nombre})),
+      el('span',{class:'dim',style:'font-weight:700',text:dom+' / '+lista.length})));
+    const grid=el('div',{class:'tarjetas-progreso'});
+    lista.forEach(c=>{
+      const m=MASTERY[SR.level(c.id)];
+      grid.appendChild(el('button',{class:'pais-chip',type:'button',title:c.nombreES+' — '+m.label+'. Capital: '+c.capitalPrincipal,
+        onclick:()=>{Globe.selectCountry(c,false);irA('mapa');setTimeout(()=>{if(Globe.available)Globe.selectCountry(c,true);},400);}},
+        el('img',{src:c.bandera,alt:'',onerror:function(){this.style.display='none';}}),
+        el('span',{class:'nom',text:c.nombreES}),
+        el('span',{class:'est',style:'background:'+m.color}),
+        el('span',{class:'sr-only',text:m.label})));
+    });
+    root.appendChild(grid);
+  });
+
+  const leyenda=el('div',{class:'pill-row',style:'margin-top:16px'});
+  Object.values(MASTERY).forEach(m=>leyenda.appendChild(el('span',{class:'chip'},
+    el('span',{class:'dot',style:'background:'+m.color}),document.createTextNode(m.label))));
+  root.appendChild(leyenda);
+  root.appendChild(el('div',{class:'muted',style:'margin-top:14px;font-size:.8rem',
+    text:'Tu progreso se guarda solo en este navegador y es independiente del de la versión completa.'}));
+}
+
+/* ============================================================
+   Arranque
+   ============================================================ */
+async function arrancar(){
+  pintarPasos();
+  try{
+    const res=await fetch('assets/data/americas.geojson');
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    const geo=await res.json();
+    if(!geo.features||!geo.features.length)throw new Error('geojson vacío');
+    window.__GEO=geo; Globe.setGeo(geo); Map2D.setGeo(geo);
+  }catch(e){
+    console.error('No se pudo cargar assets/data/americas.geojson',e);
+    window.__GEO={type:'FeatureCollection',features:[]};
+    UI.toast('No se pudo cargar el mapa','warn','Abrí la página desde un servidor local (ver README).');
+  }
+  fetch('assets/data/world.geojson').then(r=>r.ok?r.json():Promise.reject(new Error('HTTP '+r.status)))
+    .then(w=>{if(w&&w.features){w.features.forEach(f=>{f.properties=f.properties||{};f.properties.ctx=true;});
+      window.__WORLD=w; Globe.setWorldGeo(w);}})
+    .catch(e=>console.warn('Contexto mundial no disponible (el globo funciona igual)',e));
+
+  A11y.apply(); A11y.wire();
+  irA('mapa');
+  console.log('Atlas América · Estudiar — listo. Países:',COUNTRIES.length,'| WebGL:',Globe.available);
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',arrancar);
+else arrancar();
+</script>
+</body>
+</html>
